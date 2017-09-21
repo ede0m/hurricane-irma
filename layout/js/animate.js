@@ -21,17 +21,33 @@ var fetchSvg = $.ajax({
   dataType: 'html'
 });
 
+var canvas = document.createElement('canvas');
+var context = canvas.getContext('2d');
+
 var fetchPrcpColors = $.ajax({url:'js/precip-colors.json', dataType: 'json'});
 var fetchPrcpTimes = $.ajax({url:'js/times.json', dataType: 'json'});
 
+
 var animatePrcp = function(timestep, $currentStormDot) {
+
   prcpColors.forEach(function(color, index) {
     var bin = index + 1;
-    var $prcpBin = $('.p-' + timestep + '-' + bin);
+    var $prcpBin = $('.p-' + timestep + '-' + bin);       // Keep this to set correct class. But will have to not be on rect elements. 
+    if ($prcpBin.length != 0) {
+      $prcpBin.each(function(index, value) {
+        context.fillStyle = color;
+        context.strokeStyle = color;
+        context.lineWidth = 1;
+        var canvasPath = new Path2D(value.getAttribute('d'));
+        context.stroke(canvasPath);
+        context.fill(canvasPath);
+      });
+    }
     var stormX = $currentStormDot.attr('cx');
     var stormY = $currentStormDot.attr('cy');
-    $prcpBin.css("fill", color);
+    //$prcpBin.css("fill", color);                          // This will be a canvas draw
     
+
     if ($currentStormDot){
       $currentStormDot.data('cx', stormX);
       $currentStormDot.data('cy', stormY);
@@ -83,10 +99,16 @@ var pause = function() {
     ga('send', 'event', 'figure', 'user pressed pause');
   }
 };
+
 $('document').ready(function() {
   fetchSvg.done(function(data) {
     $('#map-figure figure').html(data);
     $('#map-figure svg').ready(function() {
+        var targetSvg = $("#hurricane-map-landscape")[0] || $('#hurricane-map-portrait')[0];
+        context.canvas.width = targetSvg.clientWidth;
+        context.canvas.height = targetSvg.clientHeight;
+        // Inject canvas
+        $('figure').prepend(canvas);
         $.when(fetchPrcpColors, fetchPrcpTimes).done(function() {
           prcpTimes = fetchPrcpTimes.responseJSON;
           prcpColors = fetchPrcpColors.responseJSON;
